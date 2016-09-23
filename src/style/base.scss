@@ -1,0 +1,45 @@
+html {
+  font-size: 50px;
+  -webkit-tap-highlight-color: transparent;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+body {
+  font-family: "Microsoft YaHei";
+  font-size: .28em;
+  line-height: 1;
+  color: #333;
+  background-color: white;
+  margin: 0;
+  height: 100%;
+}
+
+button, input, optgroup, select, textarea {
+    color: inherit;
+    font: inherit;
+    margin: 0;
+}
+
+input, select, button {
+    outline: none;
+}
+
+button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+button, html input[type=button], input[type=reset], input[type=submit] {
+    -webkit-appearance: button;
+    cursor: pointer;
+}
+
+h6, p {
+    line-height: 1.41;
+    text-align: justify;
+    margin: -.2em 0;
+    word-break: break-all;
+}
