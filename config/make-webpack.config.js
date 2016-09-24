@@ -18,41 +18,34 @@ let nodeModPath = path.resolve(__dirname, '../node_modules')
 let pathMap = require('../src/pathmap.json')
 
 // 获取所有需要打包的JS文件
-let entries = (function () {
-  let jsDir = path.resolve(srcDir, 'controller')
-  let entryFiles = glob.sync(jsDir + '/*.js')
-  let map = {}
+var entries = {};
 
-  entryFiles.forEach((filePath) => {
-    let filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'))
-    map[filename] = filePath
-  })
-
-  return map
-})()
-// Js文件名称集合
-let chunks = Object.keys(entries)
-
-// generate entry html files
 // 自动生成入口文件，入口js名必须和入口文件名相同
 // 例如，a页的入口文件是a.html，那么在js目录下必须有一个a.js作为入口文件
 let plugins = (function () {
-  let entryHtml = glob.sync(srcDir + '/*.{html,htm}')
+  let entryHtml = glob.sync(srcDir + '/view/*.html')
   let r = []
-
   entryHtml.forEach((filePath) => {
     let filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'))
     let conf = {
       template: 'html!' + filePath,
       filename: filename + '.html'
     }
-
-    if (filename in entries) {
-      conf.inject = 'body'
+    conf.inject = 'body'
+    conf.chunks = []
+    var jsPath = path.resolve(srcDir, 'controller/' + filename + ".js")
+    var scssPath = path.resolve(srcDir, 'style/' + filename + ".scss")
+    if (fs.existsSync(jsPath)) {
+      entries[filename] = jsPath
       conf.chunks = ['vender', filename]
+      conf.chunks.push('vender');
+      conf.chunks.push('filename');
     }
-
-    // if(/b|c/.test(filename)) conf.chunks.splice(2, 0, 'common-b-c')
+    if(fs.existsSync(scssPath)) {
+      var scssKeyName = "scss" + filename
+      entries[scssKeyName] = [path.resolve(srcDir, 'base/baseStyle.scss'), scssPath]
+      conf.chunks.push(scssKeyName)
+    }
 
     r.push(new HtmlWebpackPlugin(conf))
   })
@@ -62,7 +55,7 @@ let plugins = (function () {
 
 module.exports = (debug) => {
   // 这里publicPath要使用绝对路径，不然scss/css最终生成的css图片引用路径是错误的，应该是scss-loader的bug
-  let publicPath = '/'
+  let publicPath = ''
   //
   let cssLoader
   let sassLoader
@@ -84,9 +77,9 @@ module.exports = (debug) => {
 
   if (debug) {
     var extractCSS = new ExtractTextPlugin('css/[name].css?[contenthash]')
-    cssLoader = extractCSS.extract(['style', 'css', 'autoprefixer'])
-    sassLoader = extractCSS.extract(['style', 'css', 'autoprefixer', 'sass'])
-    plugins.push(new ExtractTextPlugin('css/[name].css?[contenthash]'), new webpack.HotModuleReplacementPlugin())
+    cssLoader = extractCSS.extract(['css', 'autoprefixer'])
+    sassLoader = extractCSS.extract(['css', 'autoprefixer', 'sass'])
+    plugins.push(extractCSS, new webpack.HotModuleReplacementPlugin())
   } else {
     var extractCSS = new ExtractTextPlugin('css/[contenthash:8].[name].min.css', {
       // 当allChunks指定为false时，css loader必须指定怎么处理
@@ -124,14 +117,14 @@ module.exports = (debug) => {
   let config = {
     entry: Object.assign(entries, {
       // 用到什么公共lib（例如React.js），就把它加进vender去，目的是将公用库单独提取打包
-      'vender': ['jquery-compat', 'avalon2']
+      'vender': ['jquery-compat', 'avalon2', path.resolve(srcDir, 'base/baseController.js')]
     }),
 
     output: {
       path: assets,
-      filename: debug ? '[name].js' : 'controller/[chunkhash:8].[name].min.js',
-      chunkFilename: debug ? '[chunkhash:8].chunk.js' : 'controller/[chunkhash:8].chunk.min.js',
-      hotUpdateChunkFilename: debug ? '[id].js' : 'controller/[id].[chunkhash:8].min.js',
+      filename: debug ? 'controller/[name].js' : 'controller/[chunkhash:8].[name].min.js',
+      chunkFilename: debug ? 'controller/[chunkhash:8].chunk.js' : 'controller/[chunkhash:8].chunk.min.js',
+      hotUpdateChunkFilename: debug ? 'controller/[id].js' : 'controller/[id].[chunkhash:8].min.js',
       publicPath: publicPath
     },
 
@@ -160,18 +153,6 @@ module.exports = (debug) => {
         { test: /\.(tpl|ejs)$/, loader: 'ejs' },
         { test: /\.css$/, loader: cssLoader },
         { test: /\.scss$/, loader: sassLoader },
-        // {
-        //   test: /\.css$/,
-        //   loader: ExtractTextPlugin.extract('style-loader', 'css-loader', 'autoprefixer-loader')
-        // },
-        // {
-        //   test: /\.scss$/,
-        //   loader: ExtractTextPlugin.extract(
-        //     'style-loader',
-        //     'css-loader',
-        //     'autoprefixer-loader',
-        //     'sass-loader')
-        // },
         {
           test: /\.js$/,
           loader: 'babel',
