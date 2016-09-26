@@ -1,31 +1,41 @@
 // 引用需要用到的组件
-let path = require('path')
-let fs = require('fs')
-let webpack = require('webpack')
-let glob = require('glob')
-let ExtractTextPlugin = require('extract-text-webpack-plugin')
-let HtmlWebpackPlugin = require('html-webpack-plugin')
-let UglifyJsPlugin = webpack.optimize.UglifyJsPlugin
-let CommonsChunkPlugin = webpack.optimize.CommonsChunkPlugin
+var path = require('path')
+var fs = require('fs')
+var webpack = require('webpack')
+var glob = require('glob')
+var ExtractTextPlugin = require('extract-text-webpack-plugin')
+var HtmlWebpackPlugin = require('html-webpack-plugin')
+var UglifyJsPlugin = webpack.optimize.UglifyJsPlugin
+var CommonsChunkPlugin = webpack.optimize.CommonsChunkPlugin
 
 // 源文件所在全路径
-let srcDir = path.resolve(__dirname, '../src')
+var srcDir = path.resolve(__dirname, '../src')
 // 打包输出全路径
-let assets = path.resolve(__dirname, '../assets')
+var assets = path.resolve(__dirname, '../assets')
 // 组件所在全路径
-let nodeModPath = path.resolve(__dirname, '../node_modules')
+var nodeModPath = path.resolve(__dirname, '../node_modules')
 // 不知道怎么描述
-let pathMap = require('../src/pathmap.json')
+var pathMap = require('../src/pathmap.json')
+// View 文件所处路径
+var htmlPath = glob.sync(srcDir + '/view/*.html')
+// controller 文件所处路径
+var controllerPath = path.resolve(srcDir, 'controller/')
+// style 文件所处路径
+var stylePath = path.resolve(srcDir, 'style/')
+
+// 顶层样式
+var baseStyle = path.resolve(srcDir, 'style/baseStyle.scss')
+// 顶层控制
+var baseController = path.resolve(srcDir, 'controller/baseController.js')
 
 // 获取所有需要打包的JS文件
 var entries = {};
 
 // 自动生成入口文件，入口js名必须和入口文件名相同
 // 例如，a页的入口文件是a.html，那么在js目录下必须有一个a.js作为入口文件
-let plugins = (function () {
-  let entryHtml = glob.sync(srcDir + '/view/*.html')
+var plugins = (function () {
   let r = []
-  entryHtml.forEach((filePath) => {
+  htmlPath.forEach((filePath) => {
     let filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'))
     let conf = {
       template: 'html!' + filePath,
@@ -33,8 +43,10 @@ let plugins = (function () {
     }
     conf.inject = 'body'
     conf.chunks = []
-    var jsPath = path.resolve(srcDir, 'controller/' + filename + ".js")
-    var scssPath = path.resolve(srcDir, 'style/' + filename + ".scss")
+    // controller 文件所处路径
+    var jsPath = path.resolve(controllerPath, filename + ".js")
+    // style 文件所处路径
+    var scssPath = path.resolve(stylePath, filename + ".scss")
     if (fs.existsSync(jsPath)) {
       entries[filename] = jsPath
       conf.chunks = ['vender', filename]
@@ -42,8 +54,8 @@ let plugins = (function () {
       conf.chunks.push('filename');
     }
     if(fs.existsSync(scssPath)) {
-      var scssKeyName = "scss" + filename
-      entries[scssKeyName] = [path.resolve(srcDir, 'base/baseStyle.scss'), scssPath]
+      var scssKeyName = filename + "Style"
+      entries[scssKeyName] = [baseStyle, scssPath]
       conf.chunks.push(scssKeyName)
     }
 
@@ -117,7 +129,7 @@ module.exports = (debug) => {
   let config = {
     entry: Object.assign(entries, {
       // 用到什么公共lib（例如React.js），就把它加进vender去，目的是将公用库单独提取打包
-      'vender': ['jquery-compat', 'avalon2', path.resolve(srcDir, 'base/baseController.js')]
+      'vender': ['jquery-compat', 'avalon2', baseController]
     }),
 
     output: {
@@ -137,7 +149,7 @@ module.exports = (debug) => {
     module: {
       loaders: [
         {
-          test: /\.((woff2?|svg)(\?v=[0-9]\.[0-9]\.[0-9]))|(woff2?|svg|jpe?g|png|gif|ico)$/,
+          test: /\.((svg)(\?v=[0-9]\.[0-9]\.[0-9]))|(svg|jpe?g|png|gif|ico)$/,
           loaders: [
             // url-loader更好用，小于10KB的图片会自动转成dataUrl，
             // 否则则调用file-loader，参数直接传入
@@ -146,10 +158,10 @@ module.exports = (debug) => {
           ]
         },
         {
-          test: /\.((ttf|eot)(\?v=[0-9]\.[0-9]\.[0-9]))|(ttf|eot)$/,
+          test: /\.((ttf|eot|woff2?)(\?v=[0-9]\.[0-9]\.[0-9]))|(ttf|eot|woff2)$/,
           loader: 'url?limit=10000&name=fonts/[hash:8].[name].[ext]'
         },
-        { test: /\.swf$/, loader: 'file' },
+        { test: /\.swf$/, loader: 'file?name=swf/[hash:8].[name].[ext]' },
         { test: /\.(tpl|ejs)$/, loader: 'ejs' },
         { test: /\.css$/, loader: cssLoader },
         { test: /\.scss$/, loader: sassLoader },
@@ -162,7 +174,7 @@ module.exports = (debug) => {
           test: /\.json(\?v=\d+\.\d+\.\d+)?$/,
           loader: 'url',
           query: {
-            name: '[name].[ext]?mimetype=application/json'
+            name: 'json/[name].[ext]?mimetype=application/json'
           }
         }
       ]

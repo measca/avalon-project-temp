@@ -1,98 +1,49 @@
-'use strict';
+var express = require('express')
+var util = require('util')
+var path = require('path')
+var glob = require('glob')
 
-// load native modules
-let http = require('http')
-let path = require('path')
-let util = require('util')
+var app = express()
+var port = 8080
 
-// load 3rd modules
-let koa = require('koa')
-let router = require('koa-router')()
-let serve = require('koa-static')
-let colors = require('colors')
-let open = require('open')
+var env = process.argv[2] || process.env.NODE_ENV
+var debug = 'production' !== env
 
-// load local modules
-let pkg = require('../package.json')
-let env = process.argv[2] || process.env.NODE_ENV
-let debug = 'production' !== env
-let viewDir = debug ? 'src' : 'assets'
-let staticDir = path.resolve(__dirname, '../' + (debug ? 'src' : 'assets'))
+if (debug) {
+  var webpack = require('webpack'),
+    webpackDevMiddleware = require('webpack-dev-middleware'),
+    webpackHotMiddleware = require('webpack-hot-middleware'),
+    webpackDevConfig = require('../config/webpack-dev.config')
 
-// load routes
-let routes = require('./routes')
+  var compiler = webpack(webpackDevConfig)
 
-// init framework
-let app = koa()
-
-colors.setTheme({
-    silly: 'rainbow',
-    input: 'grey',
-    verbose: 'cyan',
-    prompt: 'grey',
-    info: 'green',
-    data: 'grey',
-    help: 'cyan',
-    warn: 'yellow',
-    debug: 'blue',
-    error: 'red'
-})
-
-// basic settings
-app.keys = [pkg.name, pkg.description]
-app.proxy = true
-
-// global events listen
-app.on('error', (err, ctx) => {
-    err.url = err.url || ctx.request.url
-    console.error(err, ctx)
-})
-
-// handle favicon.ico
-app.use(function*(next) {
-    if (this.url.match(/favicon\.ico$/)) this.body = ''
-    yield next
-})
-
-// logger
-app.use(function*(next) {
-    console.log(this.method.info, this.url)
-    yield next
-})
-
-// use routes
-routes(router, app, staticDir)
-app.use(router.routes())
-
-if(debug) {
-    let webpackDevMiddleware = require('koa-webpack-dev-middleware')
-    let webpack = require('webpack')
-    let webpackConf = require('../config/webpack-dev.config')
-    let compiler = webpack(webpackConf)
-
-    // 为使用Koa做服务器配置koa-webpack-dev-middleware
-    app.use(webpackDevMiddleware(compiler, webpackConf.devServer))
-
-    // 为实现HMR配置webpack-hot-middleware
-    let hotMiddleware = require("webpack-hot-middleware")(compiler);
-    // Koa对webpack-hot-middleware做适配
-    app.use(function* (next) {
-      yield hotMiddleware.bind(null, this.req, this.res);
-      yield next;
-    });
+  app.use(webpackDevMiddleware(compiler, webpackDevConfig.devServer))
+  app.use(webpackHotMiddleware(compiler))
+} else {
+  app.use(express.static(path.resolve(__dirname, '../assets')))
 }
 
-// handle static files
-app.use(serve(staticDir, {
-    maxage: 0
-}))
+// 加载API
+var apiDir = path.resolve(process.cwd(), 'api')
+var apiNames = (function () {
+  var files = glob.sync(apiDir + '/*.js')
+  var names = []
+  files.forEach((filePath) => {
+    var filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'))
+    names.push(filename);
+  })
 
-app = http.createServer(app.callback())
-
-app.listen(pkg.localServer.port, '127.0.0.1', () => {
-    let url = util.format('http://%s:%d', 'localhost', pkg.localServer.port)
-
-    console.log('Listening at %s', url)
-
-    open(url)
+  return names
+})()
+apiNames.forEach(function (name) {
+  var apiFn = require('../api/' + name)
+  var fileName = name
+  if(name.indexOf(".") >= 0) fileName = name.slice(0,name.indexOf("."))
+  if(name.slice(name.indexOf(".") + 1) == "post") {
+    app.post('/api/' + fileName, apiFn)
+  } else {
+    app.get('/api/' + fileName, apiFn)
+  }
 })
+
+app.listen(port)
