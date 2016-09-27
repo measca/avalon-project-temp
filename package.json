@@ -3,7 +3,7 @@
   "description": "Frontend engineering solution based on webpack.",
   "version": "0.1.0",
   "scripts": {
-    "start-dev": "supervisor -w server,api,config,src/view server/app",
+    "start-dev": "supervisor -w server,api,config server/app",
     "build": "gulp --gulpfile config/gulpfile.js",
     "start-release": "node server/app production",
     "deploy": "gulp --gulpfile config/gulpfile.js deploy"

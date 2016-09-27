@@ -14,10 +14,12 @@ var srcDir = path.resolve(__dirname, '../src')
 var assets = path.resolve(__dirname, '../assets')
 // 组件所在全路径
 var nodeModPath = path.resolve(__dirname, '../node_modules')
+// 视图所属文件夹
+var viewPath = path.resolve(srcDir, 'view')
 // 不知道怎么描述
 var pathMap = require('../src/pathmap.json')
 // View 文件所处路径
-var htmlPath = glob.sync(srcDir + '/view/*.html')
+var htmlPath = glob.sync(viewPath + '/**/*.html')
 // controller 文件所处路径
 var controllerPath = path.resolve(srcDir, 'controller/')
 // style 文件所处路径
@@ -36,7 +38,9 @@ var entries = {};
 var plugins = (function () {
   let r = []
   htmlPath.forEach((filePath) => {
-    let filename = filePath.substring(filePath.lastIndexOf('\/') + 1, filePath.lastIndexOf('.'))
+    let pathIndex = path.resolve(filePath).indexOf(viewPath) + viewPath.length + 1
+    let pathName = filePath.substring(pathIndex)
+    let filename = pathName.substring(0, pathName.lastIndexOf('.'))
     let conf = {
       template: 'html!' + filePath,
       filename: filename + '.html'
@@ -67,7 +71,7 @@ var plugins = (function () {
 
 module.exports = (debug) => {
   // 这里publicPath要使用绝对路径，不然scss/css最终生成的css图片引用路径是错误的，应该是scss-loader的bug
-  let publicPath = ''
+  let publicPath = '/'
   //
   let cssLoader
   let sassLoader
