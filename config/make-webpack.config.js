@@ -31,7 +31,7 @@ var baseStyle = path.resolve(srcDir, 'style/baseStyle.scss')
 var baseController = path.resolve(srcDir, 'controller/baseController.js')
 
 // 获取所有需要打包的JS文件
-var entries = {};
+var entries = {}
 
 // 自动生成入口文件，入口js名必须和入口文件名相同
 // 例如，a页的入口文件是a.html，那么在js目录下必须有一个a.js作为入口文件
@@ -48,21 +48,22 @@ var plugins = (function () {
     conf.inject = 'body'
     conf.chunks = []
     // controller 文件所处路径
-    var jsPath = path.resolve(controllerPath, filename + ".js")
+    var jsPath = path.resolve(controllerPath, filename + '.js')
     // style 文件所处路径
-    var scssPath = path.resolve(stylePath, filename + ".scss")
+    var scssPath = path.resolve(stylePath, filename + '.scss')
     if (fs.existsSync(jsPath)) {
-      entries[filename] = jsPath
+      entries[filename] = [jsPath]
       conf.chunks = ['vender', filename]
-      conf.chunks.push('vender');
-      conf.chunks.push('filename');
     }
-    if(fs.existsSync(scssPath)) {
-      var scssKeyName = filename + "Style"
-      entries[scssKeyName] = [baseStyle, scssPath]
-      conf.chunks.push(scssKeyName)
+    if (fs.existsSync(scssPath)) {
+      if (Array.isArray(entries[filename])) {
+        entries[filename].push(baseStyle)
+        entries[filename].push(scssPath)
+      } else {
+        entries[filename] = [baseStyle, scssPath]
+        conf.chunks = [filename]
+      }
     }
-
     r.push(new HtmlWebpackPlugin(conf))
   })
 
@@ -153,16 +154,11 @@ module.exports = (debug) => {
     module: {
       loaders: [
         {
-          test: /\.((svg)(\?v=[0-9]\.[0-9]\.[0-9]))|(svg|jpe?g|png|gif|ico)$/,
-          loaders: [
-            // url-loader更好用，小于10KB的图片会自动转成dataUrl，
-            // 否则则调用file-loader，参数直接传入
-            'url?limit=10000&name=img/[hash:8].[name].[ext]',
-            'image?{bypassOnDebug:true, progressive:true,optimizationLevel:3,pngquant:{quality:"65-80",speed:4}}'
-          ]
+          test: /\.(jpe?g|png|gif|ico)$/,
+          loaders: 'file?name=img/[hash:8].[name].[ext]'
         },
         {
-          test: /\.((ttf|eot|woff2?)(\?v=[0-9]\.[0-9]\.[0-9]))|(ttf|eot|woff2)$/,
+          test: /\.((ttf|eot|woff2?|svg)(\?.*))|(ttf|eot|woff2?|svg)$/,
           loader: 'url?limit=10000&name=fonts/[hash:8].[name].[ext]'
         },
         { test: /\.swf$/, loader: 'file?name=swf/[hash:8].[name].[ext]' },
