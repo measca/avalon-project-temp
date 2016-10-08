@@ -155,7 +155,12 @@ module.exports = (debug) => {
       loaders: [
         {
           test: /\.(jpe?g|png|gif|ico)$/,
-          loaders: 'file?name=img/[hash:8].[name].[ext]'
+          loaders: [
+            // url-loader更好用，小于10KB的图片会自动转成dataUrl，
+            // 否则则调用file-loader，参数直接传入
+            'url?limit=10000&name=img/[hash:8].[name].[ext]',
+            // 'image?{bypassOnDebug:true, progressive:true,optimizationLevel:3,pngquant:{quality:"65-80",speed:4}}'
+          ]
         },
         {
           test: /\.((ttf|eot|woff2?|svg)(\?.*))|(ttf|eot|woff2?|svg)$/,

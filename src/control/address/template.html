@@ -1,0 +1,27 @@
+<div class="city-picker">
+  <div class="city-picker-span" ms-class="{ open : @__IsOpen }" ms-click="@__IsOpen = !@__IsOpen">
+    <span class="placeholder" ms-visible="@SelectDatas.length <= 0">{{@placeholder}}</span>
+    <div class="title" ms-visible="@SelectDatas.length > 0">
+      <span ms-for="d in @SelectDatas">{{d.name}}</span>
+    </div>
+    <div class="arrow"></div>
+  </div>
+  <div class="city-picker-dropdown" ms-visible="@__IsOpen">
+    <div class="city-picker-dropdown-area">
+      <div class="city-select-tab">
+        <a ms-for="d in @__Datas" ms-class="(d.isShow ? 'active' : '')" ms-click="@onTabClick(d)">{{d.selectName}}</a>
+      </div>
+      <div class="city-select-content">
+        <div class="city-msg" ms-visible="@__IsShowMsg">{{@__Msg}}</div>
+        <div class="city-select" ms-for="(index,d) in @__Datas" style="display: block;" ms-css="{ 'display': d.isShow ? 'block' : 'none' }">
+          <dl ms-for="(key,vals) in d.datas">
+            <dt>{{key}}</dt>
+            <dd>
+              <a ms-for="m in vals" ms-class="(m.id == d.selectId ? 'active' : '')" ms-click="@onItemClick(index,m,d)">{{m.name}}</a>
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
